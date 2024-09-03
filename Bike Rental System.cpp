@@ -1,8 +1,10 @@
 #include <iostream>
 #include <stdio.h>
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <vector>
+#include <cctype>
 #include <conio.h>
 #include <ctime>
 using namespace std;
@@ -32,7 +34,7 @@ class Bike
                     Rate = (RatingSum / RatingCount);
                 }
                 virtual void Display() const {
-                    cout << "SerialNumber: " << SerialNumber  << "  Cost: " << cost << "  Rented: " << (isRented ? "Yes" : "No");
+                    cout << "SerialNumber: " << SerialNumber  << "  Cost: " << cost << "$" << "  Rented: " << (isRented ? "Yes" : "No");
                     if (Rate != 0) {cout << "  Rate: " << Rate << endl;}
                     else cout << endl;
                 }
@@ -66,16 +68,16 @@ class RoadBike : public Bike
 class wallet
 {
     private:
-            double Passkey;
+            string Passkey;
     public:
             int Id;
             double balance;
             wallet() : Id(0) , balance(0) {}
             wallet(int uid) : Id(uid) , balance(0.0) {}
-        void SetPass(double pass) {
+        void SetPass(string pass) {
             Passkey = pass;
         }
-        double GetPass() {return Passkey;}
+        string GetPass() {return Passkey;}
         void Display() const {
             cout << "ID: " << Id  << "  Balance: " << balance << "$" << endl;
         }
@@ -84,7 +86,7 @@ class wallet
 class User
 {
     private:
-        int Password;
+        string Password;
     public:
         wallet CustomersWallet;
         bool CheckWallet = false;
@@ -92,14 +94,14 @@ class User
         int Rentedcount,Id;
         string Name;
         User() : Password(0) , Rentedcount(0) , Id(0) {}
-        User(int password , int uid, string uname) : Password(password) , Rentedcount(0) , Id(uid) ,  Name(uname) {}
+        User(string password , int uid, string uname) : Password(password) , Rentedcount(0) , Id(uid) ,  Name(uname) {}
         void Display() const {
             cout << "Name: " << Name << ", User Id: " << Id << endl;
             if (CheckWallet) {
                 CustomersWallet.Display();
             }
         }
-        bool CheckPass(double pass) {
+        bool CheckPass(string pass) {
             if (pass == Password) {
                 return true;
             }
@@ -107,10 +109,10 @@ class User
                 return false;
             }
         }
-        void SetPass(double upass) {
+        void SetPass(string upass) {
             Password = upass;
         }
-        int GetPass() {
+        string GetPass() {
             return Password;
         }
 };
@@ -226,19 +228,42 @@ void DisplayRentedBike() {
     getch();
 }
 
-
+bool PassManager(string Password) {
+    Password.erase(remove(Password.begin(), Password.end(), ' '), Password.end());
+    vector<char> Key(Password.begin(),Password.end());
+    int PassCount = Key.size();
+    if (PassCount >= 8) {
+        int alpha = 0,number = 0,special = 0,upper = 0;
+        for (char c : Key) {
+            if ((c >= 33 && c <= 47) || (c >= 58 && c <= 64) || (c >= 91 && c <= 96) || (c >= 123 && c <= 126)) {special++;}
+            else if (isalpha(c)) {
+                alpha++;
+                if (isupper(c)) {upper++;}
+            }
+            else if (isdigit(c)) {number++;}
+        }
+            if (alpha == 0) {cout << "Please enter at least one character."; getch(); cout << endl;}
+            if (alpha > 0 && upper == 0) {cout << "Please enter at least one uppercase character."; getch(); cout << endl;}
+            if (special == 0) {cout << "Please enter at least one special character."; getch(); cout << endl;}
+            if (number == 0) {cout << "Please enter at least one number."; getch(); cout << endl;}
+        if (alpha == 0 || upper == 0 || number == 0 || special == 0) {return false;}
+        else {return true;}
+    } else {cout << "Please enter at least 8 character."; getch();
+      cout << endl; return false;}
+}
 
 void ReturnBike() {
     int uid;
     cout << "Enter your id: ";
     cin >> uid;
+    cin.ignore();
     bool userFound = false;
     for (auto user : Users) {
         if (uid == user->Id) {
             userFound = true;
-            int pass;
+            string pass;
             cout << "Enter your password: ";
-            cin >> pass;
+            getline(cin, pass);
             if (user->CheckPass(pass)) {
                 if (user->Rentedcount > 0 && user->Rentedcount < 4) {
                         cout << endl << "Your rented bikes:" << endl;
@@ -287,13 +312,14 @@ void RentBike() {
     int uid;
     cout << "Enter your id: ";
     cin >> uid;
+    cin.ignore();
     bool userFound = false;
     for (auto user : Users) {
         if (uid == user->Id) {
             userFound = true;
-            int pass;
+            string pass;
             cout << "Enter your password: ";
-            cin >> pass;
+            getline(cin, pass);
             if (user->CheckPass(pass)) {
                 if (user->Rentedcount >= 0 && user->Rentedcount < 3) {
                         cout << endl << "AvailableBike:" << endl;
@@ -301,13 +327,14 @@ void RentBike() {
                         double sn;
                         cout << "Enter a SerialNumber to rent bike: ";
                         cin >> sn;
+                        cin.ignore();
                         for (auto bike : Bikes) {
                         if (bike->getSerialNum() == sn && !bike->isRented) {
                             if(user->CheckWallet) {
-                            cout << "Your wallet information is:    ID: " << user->CustomersWallet.Id << "      balance: " << user->CustomersWallet.balance << "$" << endl;
-                            double WalletPass;
+                            cout << endl << "Your wallet information is:    ID: " << user->CustomersWallet.Id << "      balance: " << user->CustomersWallet.balance << "$" << endl;
+                            string WalletPass;
                             cout << "Enter password of your wallet: ";
-                            cin >> WalletPass;
+                            getline(cin, WalletPass);;
                             if(user->CustomersWallet.GetPass() == WalletPass) {
 
                                 if(user->CustomersWallet.balance >= bike->cost) {
@@ -387,21 +414,16 @@ void AddBike() {
     getch();
 }
 void AddUser() {
-    string uname;
-    int uid,pass;
+    string uname,pass;
+    int uid;
     cout << "Enter your Name: ";
     cin >> uname;
     cout << "Enter your id: ";
     cin >> uid;
+    cin.ignore();
     cout << "Enter your password (above 8 number): ";
-    cin >> pass;
-    if (NumberCount(pass) >= 8) {
-        if (uid != pass) {
-    Users.push_back(new User(pass,uid,uname));
-        } else if (uid == pass) {
-            cout << "Your password must be different from your id.";
-        }
-    } else {cout << "Your password must be more than 8 number.";}
+    getline(cin, pass);
+    if (PassManager(pass)) {Users.push_back(new User(pass,uid,uname));}
     getch();
 }
 void BikeList() {
@@ -444,8 +466,8 @@ void LoadData() {
         return;
     }
     if (userFile.is_open()) {
-        int id,pass;
-        string name;
+        int id;
+        string name,pass;
         while (userFile >> pass >> id >> name) {
             Users.push_back(new User(pass,id,name));
         }
@@ -499,13 +521,14 @@ while (true) {
 }
 void ShowData() {
     int uid;
-    int upass;
+    string upass;
     cout << "Enter your id: ";
     cin >> uid;
+    cin.ignore();
     for (auto user : Users) {
         if (user->Id == uid) {
             cout << "Enter your password: ";
-            cin >> upass;
+            getline(cin, upass);
             if (user->CheckPass(upass)) {
                 user->Display();
                 int answer;
@@ -532,6 +555,7 @@ void ShowData() {
         }
     }
   }
+
 void ChangeDataMenu() {
 cout << "1.Change Name" << endl;
 cout << "2.Change Password" << endl;
@@ -539,17 +563,18 @@ cout << "3.Change Wallet's Password" << endl;
 cout << "4.Change Id" << endl;
 cout << "5.Main Menu" << endl << endl;
 cout << "Pick a number: ";
-
 }
-void ChangeData() {
 
-int uid,upass;
+void ChangeData() {
+int uid;
+string upass;
     cout << "Enter your id: ";
     cin >> uid;
+    cin.ignore();
 for (auto user : Users) {
     if (user->Id == uid) {
             cout << "Enter your password: ";
-            cin >> upass;
+            getline(cin, upass);
         if (user->CheckPass(upass)) {
     while (true) {
     cout << endl;
@@ -568,28 +593,34 @@ for (auto user : Users) {
     }
     
     else if (choice == 2) {
-        int upass;
-        cout << "Enter your new password: ";
-        cin >> upass;
-        user->SetPass(upass);
-        cout << "Your password changed to " << user->GetPass() << " successfully." << endl;
-        getch();
+            string upass;
+            cout << "Enter your new password: ";
+            cin.ignore();
+            getline(cin, upass);
+        if (PassManager(upass)) {    
+            user->SetPass(upass);
+            cout << "Your password changed to " << user->GetPass() << " successfully." << endl;
+        } else if (!PassManager(upass)) {return;}
+            getch();
     
     }
 
     else if (choice == 3) {
         if (user->CheckWallet) {
-                double WalletPass;
+                string WalletPass;
                 user->CustomersWallet.Display();
                 cout << "Enter a current password: ";
-                cin >> WalletPass;
+                cin.ignore();
+                getline(cin, WalletPass);
             if (user->CustomersWallet.GetPass() == WalletPass) {
-                double newWalletPass;
+                string newWalletPass;
                 cout << "Enter the new password: ";
-                cin >> newWalletPass;
+                getline(cin, newWalletPass);
+            if (PassManager(newWalletPass)) {
                 user->CustomersWallet.SetPass(newWalletPass);
                 cout << "Your password has been successfully changed." << endl;
                 getch();
+            } else {getch(); return;}
             } else if (user->CustomersWallet.GetPass() != WalletPass) {
                 cout << "Your password is incorrect." << endl;
                 getch();
@@ -630,28 +661,32 @@ for (auto user : Users) {
 }
 
 void Addwallet() {
-    int uid,upass;
+    int uid;
+    string upass;
     cout << "Enter your ID: ";
     cin >> uid;
+    cin.ignore();
     bool userFound = false;
     for (auto user : Users) {
        if (uid == user->Id) {
         userFound = true;
     cout << "Enter your password: ";
-    cin >> upass;
+    getline(cin, upass);
     if(user->CheckPass(upass)) {
 //Get Data for Wallet
-        double WalletID,WalletPass;
+        double WalletID;
+        string WalletPass;
         srand(static_cast<unsigned int>(time(0)));
         WalletID = rand();
         cout << "Enter password for your wallet: ";
-        cin >> WalletPass;
+        getline(cin, WalletPass);
+    if (PassManager(WalletPass)) {
         user->CustomersWallet = wallet(WalletID);
         user->CustomersWallet.SetPass(WalletPass);
         user->CheckWallet = true;
         user->CustomersWallet.Display();
         getch();
-        return;
+        return; } else {getch(); return;}
                 }  else if (!user->CheckPass(upass)) {
                     cout << "Your password is incorrect." << endl;
                     getch();
@@ -666,21 +701,24 @@ void Addwallet() {
 }
 
 void Chargewallet() {
-    int uid,upass;
+    int uid;
+    string upass;
     cout << "Enter your ID: ";
     cin >> uid;
+    cin.ignore();
     bool userFound = false;
     for (auto user : Users) {
         if(uid == user->Id) {
             userFound = true;
             cout << "Enter your password: ";
-            cin >> upass;
+            getline(cin, upass);
             if(user->CheckPass(upass)) {
                 if(user->CheckWallet) {
                     cout << "Your wallet information is:    ID: " << user->CustomersWallet.Id << "      balance: " << user->CustomersWallet.balance << "$" << endl;
-                    double WalletPass,charge;
+                    double charge;
+                    string WalletPass;
                     cout << "Enter password of your wallet: ";
-                    cin >> WalletPass;
+                    getline(cin, WalletPass);
                     if(user->CustomersWallet.GetPass() == WalletPass) {
                         cout << "How much that you want charge your wallet? ";
                         cin >> charge;
