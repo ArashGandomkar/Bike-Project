@@ -7,6 +7,8 @@
 #include <cctype>
 #include <conio.h>
 #include <ctime>
+#include <windows.h>
+#include <unistd.h>
 using namespace std;
 
 class Bike
@@ -252,8 +254,34 @@ bool PassManager(string Password) {
       cout << endl; return false;}
 }
 
+string getPassword() {
+    string password;
+    char ch;
+
+    while (true) {
+        ch = getch();
+        if (ch == '\r') {
+            break;
+        }
+        if (ch == '\b') {
+                if (!password.empty()) {
+                    cout << "\b \b";
+                    password.pop_back();
+                }
+            } else {
+                password += ch;
+                cout << '*';
+        }
+    }
+    cout << endl;
+    return password;
+}
+
 void ReturnBike() {
     int uid;
+    int attempts = 0;
+    int maxAttempts = 3;
+while (true) {
     cout << "Enter your id: ";
     cin >> uid;
     cin.ignore();
@@ -263,7 +291,7 @@ void ReturnBike() {
             userFound = true;
             string pass;
             cout << "Enter your password: ";
-            getline(cin, pass);
+            pass = getPassword();
             if (user->CheckPass(pass)) {
                 if (user->Rentedcount > 0 && user->Rentedcount < 4) {
                         cout << endl << "Your rented bikes:" << endl;
@@ -297,9 +325,14 @@ void ReturnBike() {
                     return;
                 }
         } else if (!user->CheckPass(pass)) {
-            cout << "Your password is incorrect." << endl;
-            getch();
-            return;
+            attempts++;
+                cout << "Incorrect password. Attempt " << attempts << " of " << maxAttempts << "." << endl;
+                if (attempts >= maxAttempts) {
+                    cout << "Too many incorrect attempts. Please wait 10 seconds before trying again." << endl;
+                usleep(10000000);
+                attempts = 0;
+                return;
+                }
         } 
         }
     } if (!userFound) {
@@ -307,9 +340,15 @@ void ReturnBike() {
             getch();
             return;
         }
+    }
 }
+////////////////////////////////////////////////////////New
 void RentBike() {
     int uid;
+    int attempts = 0;
+    int walletAttempts = 0;
+    int maxAttempts = 3;
+while (true) {
     cout << "Enter your id: ";
     cin >> uid;
     cin.ignore();
@@ -319,7 +358,7 @@ void RentBike() {
             userFound = true;
             string pass;
             cout << "Enter your password: ";
-            getline(cin, pass);
+            pass = getPassword();
             if (user->CheckPass(pass)) {
                 if (user->Rentedcount >= 0 && user->Rentedcount < 3) {
                         cout << endl << "AvailableBike:" << endl;
@@ -334,7 +373,7 @@ void RentBike() {
                             cout << endl << "Your wallet information is:    ID: " << user->CustomersWallet.Id << "      balance: " << user->CustomersWallet.balance << "$" << endl;
                             string WalletPass;
                             cout << "Enter password of your wallet: ";
-                            getline(cin, WalletPass);;
+                            WalletPass = getPassword();
                             if(user->CustomersWallet.GetPass() == WalletPass) {
 
                                 if(user->CustomersWallet.balance >= bike->cost) {
@@ -353,28 +392,43 @@ void RentBike() {
                                 return;
                               }
                             } else if(user->CustomersWallet.GetPass() != WalletPass) {
-                              cout << "A password that you entered for wallet is incorrect." << endl;
-                              getch();
+                              walletAttempts++;
+                              cout << "Incorrect password. Attempt " << walletAttempts << " of " << maxAttempts << "." << endl;
+                              if (walletAttempts >= maxAttempts) {
+                                  cout << "Too many incorrect attempts. Please wait 10 seconds before trying again." << endl;
+                              usleep(10000000);
+                              walletAttempts = 0;
                               return;
+                              }
+                              getch();
                             }
                             } else if(!user->CheckWallet) {
                                cout << "You don't have any wallet." << endl;
                                getch();
                                return; 
                             }
-                        }
+                        } else {
+                            cout << "Bike not found or already rented." << endl;
+                            getch();
+                            return;
+                            }
                     }
-                    cout << "Bike not found or already rented." << endl;
-                    getch();
-                    return;
-                }
+                    
+                } 
                 else if (user->Rentedcount >= 3) {
                     cout << "You have rented " << user->Rentedcount << " bikes, You can't rent any more." << endl;
                     getch();
                     return;
                 }
             } else if (!user->CheckPass(pass)) {
-                cout << "Your password is incorrect." << endl;
+                attempts++;
+                cout << "Incorrect password. Attempt " << attempts << " of " << maxAttempts << "." << endl;
+                if (attempts >= maxAttempts) {
+                    cout << "Too many incorrect attempts. Please wait 10 seconds before trying again." << endl;
+                usleep(10000000);
+                attempts = 0;
+                return;
+                }
                 getch();
                 return;
                 }
@@ -384,6 +438,7 @@ void RentBike() {
             getch();
             return;
         }
+}
 }
 void AddBike() {
     int type;
@@ -421,7 +476,7 @@ void AddUser() {
     cout << "Enter your id: ";
     cin >> uid;
     cin.ignore();
-    cout << "Enter your password (above 8 number): ";
+    cout << "Enter your password (above 8 (character|upeercase character|special character|number)): ";
     getline(cin, pass);
     if (PassManager(pass)) {Users.push_back(new User(pass,uid,uname));}
     getch();
@@ -522,13 +577,16 @@ while (true) {
 void ShowData() {
     int uid;
     string upass;
+    int attempts = 0;
+    int maxAttempts = 3;
+while (true) {
     cout << "Enter your id: ";
     cin >> uid;
     cin.ignore();
     for (auto user : Users) {
         if (user->Id == uid) {
             cout << "Enter your password: ";
-            getline(cin, upass);
+            upass = getPassword();
             if (user->CheckPass(upass)) {
                 user->Display();
                 int answer;
@@ -544,8 +602,12 @@ void ShowData() {
                     }
 
             } else if (!user->CheckPass(upass)) {
-                cout << "Your password is incorrect." << endl;
-                getch();
+                attempts++;
+                cout << "Incorrect password. Attempt " << attempts << " of " << maxAttempts << "." << endl;
+                if (attempts >= maxAttempts) {
+                    cout << "Too many incorrect attempts. Please wait 10 seconds before trying again." << endl;
+                usleep(10000000);
+                attempts = 0;
                 return;
             }
         } else if (user->Id != uid) {
@@ -553,9 +615,10 @@ void ShowData() {
             getch();
             return;
         }
+      }
     }
   }
-
+}
 void ChangeDataMenu() {
 cout << "1.Change Name" << endl;
 cout << "2.Change Password" << endl;
@@ -568,13 +631,17 @@ cout << "Pick a number: ";
 void ChangeData() {
 int uid;
 string upass;
+    int attempts = 0;
+    int walletAttempts = 0;
+    int maxAttempts = 3;
+while (true) {
     cout << "Enter your id: ";
     cin >> uid;
     cin.ignore();
 for (auto user : Users) {
     if (user->Id == uid) {
             cout << "Enter your password: ";
-            getline(cin, upass);
+            upass = getPassword();
         if (user->CheckPass(upass)) {
     while (true) {
     cout << endl;
@@ -611,7 +678,7 @@ for (auto user : Users) {
                 user->CustomersWallet.Display();
                 cout << "Enter a current password: ";
                 cin.ignore();
-                getline(cin, WalletPass);
+                WalletPass = getPassword();
             if (user->CustomersWallet.GetPass() == WalletPass) {
                 string newWalletPass;
                 cout << "Enter the new password: ";
@@ -622,7 +689,13 @@ for (auto user : Users) {
                 getch();
             } else {getch(); return;}
             } else if (user->CustomersWallet.GetPass() != WalletPass) {
-                cout << "Your password is incorrect." << endl;
+                walletAttempts++;
+                cout << "Incorrect password. Attempt " << walletAttempts << " of " << maxAttempts << "." << endl;
+                if (walletAttempts >= maxAttempts) {
+                    cout << "Too many incorrect attempts. Please wait 10 seconds before trying again." << endl;
+                usleep(10000000);
+                walletAttempts = 0;
+                }
                 getch();
             }
 
@@ -649,17 +722,22 @@ for (auto user : Users) {
     cout << "Invalid choice." << endl;
   } 
         } else if (!user->CheckPass(upass)) {
-        cout << "Your password is incorrect." << endl;
-        getch();
-        return;
+          attempts++;
+          cout << "Incorrect password. Attempt " << attempts << " of " << maxAttempts << "." << endl;
+          if (attempts >= maxAttempts) {
+          cout << "Too many incorrect attempts. Please wait 10 seconds before trying again." << endl;
+          usleep(10000000);
+          attempts = 0;
+          return;
+                }
     } }else if (user->Id != uid) {
         cout << "Your id is incorrect." << endl;
         getch();
         return;
+      }
     }
   }
 }
-
 void Addwallet() {
     int uid;
     string upass;
@@ -671,7 +749,7 @@ void Addwallet() {
        if (uid == user->Id) {
         userFound = true;
     cout << "Enter your password: ";
-    getline(cin, upass);
+    upass = getPassword();
     if(user->CheckPass(upass)) {
 //Get Data for Wallet
         double WalletID;
@@ -703,6 +781,10 @@ void Addwallet() {
 void Chargewallet() {
     int uid;
     string upass;
+    int attempts = 0;
+    int walletAttempts = 0;
+    int maxAttempts = 3;
+while (true) {
     cout << "Enter your ID: ";
     cin >> uid;
     cin.ignore();
@@ -711,14 +793,14 @@ void Chargewallet() {
         if(uid == user->Id) {
             userFound = true;
             cout << "Enter your password: ";
-            getline(cin, upass);
+            upass = getPassword();
             if(user->CheckPass(upass)) {
                 if(user->CheckWallet) {
                     cout << "Your wallet information is:    ID: " << user->CustomersWallet.Id << "      balance: " << user->CustomersWallet.balance << "$" << endl;
                     double charge;
                     string WalletPass;
                     cout << "Enter password of your wallet: ";
-                    getline(cin, WalletPass);
+                    WalletPass = getPassword();
                     if(user->CustomersWallet.GetPass() == WalletPass) {
                         cout << "How much that you want charge your wallet? ";
                         cin >> charge;
@@ -728,9 +810,15 @@ void Chargewallet() {
                         return;
 
                     } else if (user->CustomersWallet.GetPass() != WalletPass) {
-                        cout << "A password that you entered for wallet is incorrect." << endl;
+                        walletAttempts++;
+                        cout << "Incorrect password. Attempt " << walletAttempts << " of " << maxAttempts << "." << endl;
+                            if (walletAttempts >= maxAttempts) {
+                              cout << "Too many incorrect attempts. Please wait 10 seconds before trying again." << endl;
+                              usleep(10000000);
+                              walletAttempts = 0;
+                              return;
+                              }
                         getch();
-                        return;
                     }
                 }   else if (!user->CheckWallet) {
                     cout << "You don't have any wallet." << endl;
@@ -739,16 +827,22 @@ void Chargewallet() {
                 }
             
         }  else if (!user->CheckPass(upass)) {
-                    cout << "Your password is incorrect." << endl;
-                    getch();
-                    return;
+                attempts++;
+                cout << "Incorrect password. Attempt " << attempts << " of " << maxAttempts << "." << endl;
+                if (attempts >= maxAttempts) {
+                cout << "Too many incorrect attempts. Please wait 10 seconds before trying again." << endl;
+                usleep(10000000);
+                attempts = 0;
+                return;
+                }
         }
        }    if(!userFound) {
         cout << "Your Id is incorrect." << endl;
         getch();
         return;
-       }
-}
+      }
+    }
+  }
 }
 
 void Wallet() {
